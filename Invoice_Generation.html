@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<body>
+<head> <title> Invoice </title> </head>
+
+
+<script>
+function processCheckout(checkoutData, user) {
+
+    const now = new Date();
+
+   // Create unique invoice number 
+    const invoiceNumber =
+        "INV-" +
+        now.getFullYear() +
+        (now.getMonth() + 1).toString().padStart(2, "0") +
+        now.getDate().toString().padStart(2, "0") +
+        "-" +
+        Math.floor(Math.random() * 90000 + 10000);
+
+    // Calculate totals 
+    let subtotal = 0;
+    checkoutData.items.forEach(item => {
+        const lineTotal = (item.qty * item.price) - (item.discount || 0);
+        subtotal += lineTotal;
+    });
+
+    const taxes = subtotal * (checkoutData.taxRate / 100);
+    const total = subtotal + taxes;
+
+    const invoice = {
+        companyName: checkoutData.companyName,
+        date: now.toISOString().slice(0, 10),
+        shipping: checkoutData.shipping,
+        invoiceNumber: invoiceNumber,
+        trn: checkoutData.trn,
+        items: checkoutData.items,
+        taxRate: checkoutData.taxRate,
+        taxes: taxes,
+        subtotal: subtotal,
+        total: total
+    };
+
+
+    // Add invoice to the user's personal invoice array 
+    user.invoices.push(invoice);
+
+    // Store ALL invoices in localStorage 
+    const allInvoices = JSON.parse(localStorage.getItem("AllInvoices")) || [];
+    allInvoices.push(invoice);
+    localStorage.setItem("AllInvoices", JSON.stringify(allInvoices));
+
+    const email = checkoutData.shipping.email || "customer email";
+    alert(`Invoice has been sent to ${email}`);
+
+
+    // Return invoice in case you need to display it 
+    return invoice;
+}
+
+
+// SHOW ALL INVOICES & SEARCH BY TRN 
+
+function ShowInvoices(trnSearch = "") {
+    const allInvoices = JSON.parse(localStorage.getItem("AllInvoices")) || [];
+    console.log("ALL INVOICES:", allInvoices);
+
+    if (trnSearch !== "") {
+        const filtered = allInvoices.filter(inv => inv.trn === trnSearch);
+        console.log(`Invoices for TRN ${trnSearch}:`, filtered);
+    }
+}
+
+// GET USER INVOICES BY TRN 
+
+function GetUserInvoices(trn) {
+    const allInvoices = JSON.parse(localStorage.getItem("AllInvoices")) || [];
+    const userInvoices = allInvoices.filter(inv => inv.trn === trn);
+
+    document.getElementById("userInvoices").innerHTML = `
+        <h2>Invoices for TRN: ${trn}</h2>
+        <pre>${JSON.stringify(userInvoices, null, 2)}</pre>
+    `;
+}
+
+
+// BUTTON TEST FUNCTIONS 
+    function runInvoiceTest() {
+    const checkoutData = {
+        companyName: "Example Co. Ltd",
+        trn: "TRN-000123",
+        taxRate: 15,
+        shipping: {
+            name: "Dario Fender",
+            address: "45 Harbor Drive",
+            city: "Kingston",
+            email: "dario@example.com"
+        },
+        items: [
+            { name: "Laptop", qty: 1, price: 1200, discount: 50 },
+            { name: "Mouse", qty: 2, price: 25, discount: 0 }
+        ]
+    };
+
+    let user = { name: "", invoices: [] };
+    const invoice = processCheckout(checkoutData, user);
+
+    document.getElementById("invoiceDisplay").innerHTML = `
+        <h2>Invoice Generated</h2>
+        <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+        <p><strong>Company:</strong> ${invoice.companyName}</p>
+        <p><strong>TRN:</strong> ${invoice.trn}</p>
+        <h3>Shipping</h3>
+        <p>${invoice.shipping.name}</p>
+        <p>${invoice.shipping.address}, ${invoice.shipping.city}</p>
+        <p>${invoice.shipping.email}</p>
+        <h3>Items Purchased</h3>
+        <ul>
+            ${invoice.items.map(item => `<li>${item.name} — Qty: ${item.qty} — Price: $${item.price} — Discount: $${item.discount}</li>`).join('')}
+        </ul>
+        <p><strong>Subtotal:</strong> $${invoice.subtotal.toFixed(2)}</p>
+        <p><strong>Taxes:</strong> $${invoice.taxes.toFixed(2)}</p>
+        <p><strong>Total:</strong> $${invoice.total.toFixed(2)}</p>
+    `;
+}
+
+function searchTRN() {
+    const trn = prompt("Enter TRN to search:");
+    ShowInvoices(trn);
+}
+
+function getInvoicesTRN() {
+    const trn = prompt("Enter TRN to display user invoices:");
+    GetUserInvoices(trn);
+}
+
+</script>
+
+</body>
+</html>
